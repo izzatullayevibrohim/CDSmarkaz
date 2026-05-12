@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="uz" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tizimga kirish</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<style>
+    body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #0f1117;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .card {
+        background: #1a1d27;
+        border: 1px solid #2a2d3a;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 440px;
+        padding: 2.5rem 2rem;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 2rem;
+    }
+
+    .logo {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #4f8ef7, #7c4fff);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; color: #fff; font-weight: 700;
+    }
+
+    .card-header h1 { font-size: 20px; font-weight: 600; color: #e8eaf0; }
+    .card-header p  { font-size: 12px; color: #6b7280; }
+
+    .alert {
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-bottom: 1.2rem;
+        display: none;
+    }
+    .alert.error   { background: #2d1a1a; color: #f87171; border: 1px solid #3d1f1f; display: block; }
+    .alert.success { background: #132d1f; color: #4ade80; border: 1px solid #1a3d28; display: block; }
+
+    .field { margin-bottom: 1rem; }
+
+    .field label {
+        display: block;
+        font-size: 13px;
+        color: #9ca3af;
+        margin-bottom: 6px;
+        font-weight: 500;
+    }
+
+    .field input {
+        width: 100%;
+        padding: 10px 14px;
+        font-size: 14px;
+        background: #0f1117;
+        border: 1px solid #2a2d3a;
+        border-radius: 8px;
+        color: #e8eaf0;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .field input::placeholder { color: #4b5563; }
+    .field input:focus {
+        border-color: #4f8ef7;
+        box-shadow: 0 0 0 3px rgba(79,142,247,0.15);
+    }
+    .field input.invalid { border-color: #ef4444; }
+
+    .remember {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 1.4rem;
+        font-size: 13px;
+        color: #9ca3af;
+        cursor: pointer;
+    }
+
+    .remember input[type="checkbox"] { accent-color: #4f8ef7; }
+
+    .btn {
+        width: 100%;
+        padding: 11px;
+        font-size: 14px;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        background: linear-gradient(135deg, #4f8ef7, #7c4fff);
+        color: #fff;
+        transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:hover   { opacity: 0.9; }
+    .btn:active  { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed}
+</style>
+
+<div class="card">
+
+    <div class="card-header">
+        <div class="logo">A</div>
+        <div>
+            <h1>Tizimga kirish</h1>
+            <p>CDS Markaz · Admin Panel</p>
+        </div>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <form id="loginForm" action="/login-check" method="POST">
+
+        <div class="field">
+            <label for="username">Foydalanuvchi nomi</label>
+            <input type="text" id="username" name="username"
+                   placeholder="username" autocomplete="username" />
+        </div>
+
+        <div class="field">
+            <label for="password">Parol</label>
+            <input type="password" id="password" name="password"
+                   placeholder="••••••••" autocomplete="current-password" />
+        </div>
+
+        <label class="remember">
+            <input type="checkbox" name="remember" /> Meni eslab qol
+        </label>
+
+        <button type="submit" class="btn" id="submitBtn">Kirish</button>
+
+    </form>
+</div>
+
+<script>
+    const params = new URLSearchParams(location.search);
+    if (params.get('error') === 'user') {
+        showAlert('error', 'Bunday foydalanuvchi topilmadi.');
+    } else if (params.get('error') === 'pass') {
+        showAlert('error', 'Parol noto\'g\'ri.');
+    }
+
+    function showAlert(type, text) {
+        const el = document.getElementById('alert');
+        el.className = 'alert ' + type;
+        el.textContent = text;
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', function (e) {
+        const username = document.getElementById('username');
+        const password = document.getElementById('password');
+        const btn      = document.getElementById('submitBtn');
+
+        username.classList.remove('invalid');
+        password.classList.remove('invalid');
+        document.getElementById('alert').className = 'alert';
+
+        let valid = true;
+        if (!username.value.trim()) { username.classList.add('invalid'); valid = false; }
+        if (!password.value)        { password.classList.add('invalid'); valid = false; }
+
+        if (!valid) {
+            e.preventDefault();
+            showAlert('error', 'Iltimos, barcha maydonlarni to\'ldiring.');
+            return;
+        }
+
+        btn.disabled    = true;
+        btn.textContent = 'Tekshirilmoqda...';
+    });
+</script>
+
+</body>
+</html>

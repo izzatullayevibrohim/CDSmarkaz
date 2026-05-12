@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <title>Admin Panel — CDS Markaz</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">C</div>
+        <span class="logo-text">CDS Markaz</span>
+    </div>
+    <nav class="sidebar-nav">
+        <span class="nav-label">Asosiy</span>
+        <button class="nav-item active" onclick="setActive(this,'Dashboard')">
+            <span>⊞</span> Dashboard
+        </button>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-row">
+            <div class="avatar">AD</div>
+            <div class="user-info">
+                <p th:text="${user.fullName}"></p>
+                <span th:text="${user.telegramUsername}"></span>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<div class="main">
+    <header class="topbar">
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="search">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <circle cx="7" cy="7" r="5.5" stroke="#6b7490" stroke-width="1.5"/>
+                <path d="M11 11l3 3" stroke="#6b7490" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <input type="text" placeholder="Qidirish..." id="searchInput" oninput="onSearch()"/>
+        </div>
+        <div class="admin-chip">
+            <div class="ac-avatar">AD</div>
+            <div class="ac-info">
+                <span class="ac-name" th:text="${user.fullName}"></span>
+                <span class="ac-role" th:text="${role.name}"></span>
+            </div>
+            <div class="ac-dot" title="Faol"></div>
+        </div>
+        <a class="icon-btn" href="/logout" title="Chiqish">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+            </svg>
+        </a>
+    </header>
+
+    <div class="content">
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">Jami foydalanuvchi</div>
+                <div class="value" th:text="${userCount}">—</div>
+                <div class="change neutral">ro'yxatdagi</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Faol</div>
+                <div class="value" th:text="${countIsActive}">—</div>
+                <div class="change up">▲ faol</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Bugun qo'shilgan</div>
+                <div class="value" th:text="${todayUsers}">—</div>
+                <div class="change up">▲ yangi</div>
+            </div>
+        </div>
+
+        <div class="panel" id="previewPanel">
+            <div class="panel-head">
+                <h2>Foydalanuvchilar ro'yxati</h2>
+                <div class="panel-actions">
+                    <button class="btn-sm" onclick="showFull()">Barchasi →</button>
+                </div>
+            </div>
+            <table>
+                <thead>
+                <tr>
+                    <th>No</th><th>To'liq ism</th><th>Telefon</th>
+                    <th>Telegram Username</th><th>Ro'yxatdan o'tgan Sana</th><th>Holat</th>
+                </tr>
+                </thead>
+                <tbody id="previewBody"></tbody>
+            </table>
+        </div>
+
+        <div class="panel hidden" id="fullPanel">
+            <div class="panel-head">
+                <h2>Barcha foydalanuvchilar</h2>
+                <div class="panel-actions">
+                    <button class="btn-sm" onclick="hideFull()">← Orqaga</button>
+                </div>
+            </div>
+            <table>
+                <thead><tr>
+                    <th>No</th><th>To'liq ism</th><th>Telefon</th>
+                    <th>Telegram</th><th>Ro'yxatdan o'tgan</th><th>Holat</th>
+                </tr></thead>
+                <tbody id="fullBody"></tbody>
+            </table>
+            <div class="pagination">
+                <span class="page-info" id="pageInfo"></span>
+                <div class="page-btns" id="pageBtns"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 🔵 Welcome message FAB -->
+    <div class="fab-wrap">
+        <span class="fab-tooltip">Welcome message yuborish</span>
+        <button class="fab blue" onclick="openModal()" title="Welcome message">
+            <svg viewBox="0 0 24 24">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- 🟢 Check message FAB -->
+    <div class="fab-wrap second">
+        <span class="fab-tooltip">Check message yuborish</span>
+        <button class="fab green" onclick="openCheckModal()" title="Check message">
+            <svg viewBox="0 0 24 24">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         MODAL — CHECK MESSAGE (🟢)
+    ════════════════════════════════════════════ -->
+    <div class="overlay" id="checkOverlay" onclick="overlayCheckClick(event)">
+        <div class="modal">
+            <div class="modal-head">
+                <h3>Check message yuborish ⏰</h3>
+                <button class="modal-x" onclick="closeCheckModal()">✕</button>
+            </div>
+            <div class="modal-body">
+
+                <label>Xabar turi</label>
+                <div class="msg-type-tabs">
+                    <button class="type-tab active" onclick="setCheckType('TEXT',this)">💬 Matn</button>
+                    <button class="type-tab" onclick="setCheckType('PHOTO',this)">🖼 Rasm</button>
+                    <button class="type-tab" onclick="setCheckType('VIDEO',this)">🎥 Video</button>
+                    <button class="type-tab" onclick="setCheckType('VOICE',this)">🎤 Ovoz</button>
+                </div>
+
+                <div id="check-field-text">
+                    <label id="check-text-label">Xabar matni</label>
+                    <textarea id="checkMsgText"></textarea>
+                </div>
+
+                <div id="check-field-file" style="display:none;">
+                    <label id="check-file-label">Fayl tanlang</label>
+                    <input type="file" id="checkMsgFile"/>
+                </div>
+
+                <div id="check-field-caption" style="display:none;">
+                    <label>Caption (ixtiyoriy)</label>
+                    <input type="text" id="checkMsgCaption" placeholder="Rasm/video uchun sarlavha..."/>
+                </div>
+
+                <div>
+                    <label>Qancha vaqtdan keyin yuborilsin</label>
+                    <input type="time" id="delayTime" step="60">
+                </div>
+
+            </div>
+            <div class="modal-foot">
+                <button class="btn-cancel" onclick="closeCheckModal()">Bekor</button>
+                <button class="btn-send" onclick="sendCheckMsg()">
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    Yuborish
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- 🟣 Feedback text FAB -->
+    <div class="fab-wrap third">
+        <span class="fab-tooltip">Feedback matni o'rnatish</span>
+        <button class="fab purple" onclick="openFeedbackModal()" title="Feedback text">
+            <svg viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         MODAL — FEEDBACK TEXT (🟣)
+    ════════════════════════════════════════════ -->
+    <div class="overlay" id="feedbackOverlay" onclick="overlayFeedbackClick(event)">
+        <div class="modal">
+            <div class="modal-head">
+                <h3>Feedback matni o'rnatish 💬</h3>
+                <button class="modal-x" onclick="closeFeedbackModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <label>Feedback xabari matni</label>
+                <textarea id="feedbackMsgText" placeholder="Feedback so'rash uchun xabar matni..."></textarea>
+                <p class="modal-note">
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="#6b7490">
+                        <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.75 10.5h-1.5v-5h1.5v5zm0-6.5h-1.5V3.5h1.5V5z"/>
+                    </svg>
+                    Bu matn foydalanuvchilarga feedback so'raganda yuboriladigan xabar.
+                </p>
+            </div>
+            <div class="modal-foot">
+                <button class="btn-cancel" onclick="closeFeedbackModal()">Bekor qilish</button>
+                <button class="btn-send" onclick="sendFeedbackText()">
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    Saqlash
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         MODAL — WELCOME MESSAGE (🔵)
+    ════════════════════════════════════════════ -->
+    <div class="overlay" id="overlay" onclick="overlayClick(event)">
+        <div class="modal">
+            <div class="modal-head">
+                <h3>
+                    Welcome message yuborish
+                    <span class="badge">Telegram Bot</span>
+                </h3>
+                <button class="modal-x" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+
+                <label>Xabar turi</label>
+                <div class="msg-type-tabs">
+                    <button class="type-tab active" onclick="setType('TEXT',this)">💬 Matn</button>
+                    <button class="type-tab" onclick="setType('PHOTO',this)">🖼 Rasm</button>
+                    <button class="type-tab" onclick="setType('VIDEO',this)">🎥 Video</button>
+                    <button class="type-tab" onclick="setType('VOICE',this)">🎤 Ovoz</button>
+                </div>
+
+                <div id="field-text">
+                    <label id="text-label">Xabar matni</label>
+                    <textarea id="msgText">Assalomu alaykum! CDS Markazga xush kelibsiz 🎉</textarea>
+                </div>
+
+                <div id="field-file" style="display:none;">
+                    <label id="file-label">Fayl tanlang</label>
+                    <input type="file" id="msgFile"/>
+                </div>
+
+                <div id="field-caption" style="display:none;">
+                    <label>Caption (ixtiyoriy)</label>
+                    <input type="text" id="msgCaption" placeholder="Rasm/video uchun sarlavha..."/>
+                </div>
+
+                <p class="modal-note">
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="#6b7490">
+                        <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm.75 10.5h-1.5v-5h1.5v5zm0-6.5h-1.5V3.5h1.5V5z"/>
+                    </svg>
+                    Bu xabar barcha ro'yxatdagi foydalanuvchilarga Telegram bot orqali yuboriladi.
+                </p>
+            </div>
+            <div class="modal-foot">
+                <button class="btn-cancel" onclick="closeModal()">Bekor qilish</button>
+                <button class="btn-send" onclick="sendMsg()">
+                    <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    Yuborish
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const ALL_USERS = /*[[${users}]]*/ [];
+
+    function row(u, index) {
+        return `<tr>
+            <td class="mono" style="color:var(--muted)">${String(index + 1).padStart(3,'0')}</td>
+            <td style="font-weight:500">${u.fullName}</td>
+            <td class="mono" style="color:var(--muted)">${u.phoneNumber}</td>
+            <td style="color:var(--accent)">@${u.telegramUsername}</td>
+            <td class="mono" style="color:var(--muted);font-size:11px">${new Date(u.createdAt).toLocaleString()}</td>
+            <td>
+                <span class="status ${u.isActive ? 'active' : 'inactive'}">
+                    <span class="dot"></span>${u.isActive ? 'Faol' : 'Nofaol'}
+                </span>
+            </td>
+        </tr>`;
+    }
+
+    // ─── PREVIEW ──────────────────────────────────────────────────
+    let filtered = [...ALL_USERS];
+
+    function renderPreview() {
+        document.getElementById('previewBody').innerHTML =
+            filtered.slice(0, 10).map((u, i) => row(u, i)).join('');
+    }
+
+    // ─── FULL TABLE ───────────────────────────────────────────────
+    const PER_PAGE = 20;
+    let page = 1;
+
+    function renderFull() {
+        const s = (page - 1) * PER_PAGE;
+        const e = Math.min(s + PER_PAGE, filtered.length);
+        document.getElementById('fullBody').innerHTML =
+            filtered.slice(s, e).map((u, i) => row(u, s + i)).join('');
+        document.getElementById('pageInfo').textContent = `${s + 1}–${e} / ${filtered.length}`;
+        buildPagination();
+    }
+
+    function buildPagination() {
+        const total = Math.ceil(filtered.length / PER_PAGE);
+        const el = document.getElementById('pageBtns');
+        el.innerHTML = '';
+
+        function btn(label, pg, disabled, active) {
+            const b = document.createElement('button');
+            b.className = 'page-btn' + (active ? ' active' : '');
+            b.textContent = label;
+            b.disabled = disabled;
+            if (!disabled) b.onclick = () => { page = pg; renderFull(); };
+            return b;
+        }
+
+        el.appendChild(btn('←', page - 1, page === 1, false));
+        for (let p = 1; p <= total; p++) {
+            const near = Math.abs(p - page) <= 1 || p === 1 || p === total;
+            if (!near) {
+                if (p === 2 || p === total - 1) {
+                    const sp = document.createElement('span');
+                    sp.className = 'page-dots';
+                    sp.textContent = '…';
+                    el.appendChild(sp);
+                }
+                continue;
+            }
+            el.appendChild(btn(p, p, false, p === page));
+        }
+        el.appendChild(btn('→', page + 1, page === total, false));
+    }
+
+    // ─── VIEW SWITCH ──────────────────────────────────────────────
+    function showFull() {
+        document.getElementById('previewPanel').classList.add('hidden');
+        document.getElementById('fullPanel').classList.remove('hidden');
+        filtered = [...ALL_USERS];
+        page = 1;
+        renderFull();
+    }
+
+    function hideFull() {
+        document.getElementById('fullPanel').classList.add('hidden');
+        document.getElementById('previewPanel').classList.remove('hidden');
+    }
+
+    // ─── SEARCH ───────────────────────────────────────────────────
+    function onSearch() {
+        const q = document.getElementById('searchInput').value.toLowerCase().trim();
+        filtered = q
+            ? ALL_USERS.filter(u =>
+                u.fullName.toLowerCase().includes(q) ||
+                u.telegramUsername.toLowerCase().includes(q) ||
+                u.phoneNumber.includes(q))
+            : [...ALL_USERS];
+        page = 1;
+        const fullOpen = !document.getElementById('fullPanel').classList.contains('hidden');
+        fullOpen ? renderFull() : renderPreview();
+    }
+
+    // ─── NAV ──────────────────────────────────────────────────────
+    function setActive(el, title) {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        el.classList.add('active');
+        document.getElementById('pageTitle').textContent = title;
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  WELCOME MESSAGE MODAL (🔵)
+    // ══════════════════════════════════════════════════════════════
+    function openModal()  { document.getElementById('overlay').classList.add('open'); }
+    function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+    function overlayClick(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+    let currentType = 'TEXT';
+
+    function setType(type, tabEl) {
+        currentType = type;
+        document.querySelectorAll('#overlay .type-tab').forEach(t => t.classList.remove('active'));
+        tabEl.classList.add('active');
+
+        const fieldText    = document.getElementById('field-text');
+        const fieldFile    = document.getElementById('field-file');
+        const fieldCaption = document.getElementById('field-caption');
+        const fileInput    = document.getElementById('msgFile');
+        const textLabel    = document.getElementById('text-label');
+
+        fieldText.style.display    = 'none';
+        fieldFile.style.display    = 'none';
+        fieldCaption.style.display = 'none';
+        fileInput.accept = '';
+
+        if (type === 'TEXT') {
+            fieldText.style.display = 'block';
+            textLabel.textContent   = 'Xabar matni';
+        } else if (type === 'PHOTO') {
+            fieldText.style.display    = 'block';
+            fieldFile.style.display    = 'block';
+            fieldCaption.style.display = 'block';
+            textLabel.textContent      = 'Matn (ixtiyoriy)';
+            document.getElementById('file-label').textContent = 'Rasm tanlang';
+            fileInput.accept = 'image/*';
+        } else if (type === 'VIDEO') {
+            fieldText.style.display    = 'block';
+            fieldFile.style.display    = 'block';
+            fieldCaption.style.display = 'block';
+            textLabel.textContent      = 'Matn (ixtiyoriy)';
+            document.getElementById('file-label').textContent = 'Video tanlang';
+            fileInput.accept = 'video/*';
+        } else if (type === 'VOICE') {
+            fieldFile.style.display = 'block';
+            document.getElementById('file-label').textContent = 'Ovozli xabar tanlang';
+            fileInput.accept = 'audio/*';
+        }
+    }
+
+    async function sendMsg() {
+        const type    = currentType;
+        const txt     = document.getElementById('msgText').value.trim();
+        const fileEl  = document.getElementById('msgFile');
+        const caption = document.getElementById('msgCaption').value.trim();
+        const file    = fileEl.files[0];
+
+        if (type === 'TEXT' && !txt) {
+            alert('❗ Xabar matni bo\'sh bo\'lishi mumkin emas!');
+            return;
+        }
+        if ((type === 'PHOTO' || type === 'VIDEO' || type === 'VOICE') && !file) {
+            alert('❗ Fayl tanlanmagan!');
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('type', type);
+            if (type === 'TEXT') {
+                formData.append('message', txt);
+            } else {
+                formData.append('file', file);
+                if (caption) formData.append('caption', caption);
+                if (txt)     formData.append('message', txt);
+            }
+
+            const response = await fetch('/send-welcome', { method: 'POST', body: formData });
+            if (!response.ok) throw new Error('Server error: ' + response.status);
+
+            closeModal();
+            alert('✅ Xabar ' + ALL_USERS.length + ' ta foydalanuvchiga muvaffaqiyatli yuborildi!');
+            document.getElementById('msgText').value = '';
+            fileEl.value = '';
+            document.getElementById('msgCaption').value = '';
+
+        } catch (error) {
+            console.error(error);
+            alert('❌ Xatolik yuz berdi. Xabar yuborilmadi!');
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  CHECK MESSAGE MODAL (🟢)
+    // ══════════════════════════════════════════════════════════════
+    function openCheckModal()  { document.getElementById('checkOverlay').classList.add('open'); }
+    function closeCheckModal() { document.getElementById('checkOverlay').classList.remove('open'); }
+    function overlayCheckClick(e) { if (e.target === document.getElementById('checkOverlay')) closeCheckModal(); }
+
+    let checkType = 'TEXT';
+
+    function setCheckType(type, el) {
+        checkType = type;
+        document.querySelectorAll('#checkOverlay .type-tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+
+        const text      = document.getElementById('check-field-text');
+        const fileDiv   = document.getElementById('check-field-file');
+        const cap       = document.getElementById('check-field-caption');
+        const fileInput = document.getElementById('checkMsgFile');
+
+        text.style.display    = 'none';
+        fileDiv.style.display = 'none';
+        cap.style.display     = 'none';
+        fileInput.accept      = '';
+
+        if (type === 'TEXT') {
+            text.style.display = 'block';
+            document.getElementById('check-text-label').textContent = 'Xabar matni';
+        } else if (type === 'PHOTO') {
+            text.style.display    = 'block';
+            fileDiv.style.display = 'block';
+            cap.style.display     = 'block';
+            document.getElementById('check-text-label').textContent = 'Matn (ixtiyoriy)';
+            document.getElementById('check-file-label').textContent = 'Rasm tanlang';
+            fileInput.accept = 'image/*';
+        } else if (type === 'VIDEO') {
+            text.style.display    = 'block';
+            fileDiv.style.display = 'block';
+            cap.style.display     = 'block';
+            document.getElementById('check-text-label').textContent = 'Matn (ixtiyoriy)';
+            document.getElementById('check-file-label').textContent = 'Video tanlang';
+            fileInput.accept = 'video/*';
+        } else if (type === 'VOICE') {
+            fileDiv.style.display = 'block';
+            document.getElementById('check-file-label').textContent = 'Ovozli xabar tanlang';
+            fileInput.accept = 'audio/*';
+        }
+    }
+
+    async function sendCheckMsg() {
+        const txt     = document.getElementById('checkMsgText').value.trim();
+        const fileEl  = document.getElementById('checkMsgFile');
+        const caption = document.getElementById('checkMsgCaption').value.trim();
+        const delay   = document.getElementById('delayTime').value;
+
+        // Validatsiya
+        if (!delay) {
+            alert('⏰ Vaqt kiriting!');
+            return;
+        }
+
+        const [hours, minutes] = delay.split(':').map(Number);
+        const totalMinutes = hours * 60 + minutes;
+
+        if (totalMinutes === 0) {
+            alert('⏰ Vaqt 0 bo\'lishi mumkin emas!');
+            return;
+        }
+
+        const file = fileEl.files[0];
+
+        if (checkType === 'TEXT' && !txt) {
+            alert('❗ Matn kiriting!');
+            return;
+        }
+        if (checkType !== 'TEXT' && !file) {
+            alert('❗ Fayl tanlanmagan!');
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('type', checkType);
+            formData.append('delayMinutes', totalMinutes);
+
+            if (checkType === 'TEXT') {
+                formData.append('message', txt);
+            } else {
+                formData.append('file', file);
+                if (caption) formData.append('caption', caption);
+                if (txt)     formData.append('message', txt);
+            }
+
+            const res = await fetch('/send-check', { method: 'POST', body: formData });
+            if (!res.ok) throw new Error();
+
+            alert('✅ Xabar yuborildi! ' + totalMinutes + ' minutdan keyin feedback so\'raladi.');
+            closeCheckModal();
+
+            // Formani tozalash
+            document.getElementById('checkMsgText').value = '';
+            fileEl.value = '';
+            document.getElementById('checkMsgCaption').value = '';
+            document.getElementById('delayTime').value = '';
+
+        } catch (e) {
+            console.error(e);
+            alert('❌ Xatolik yuz berdi!');
+        }
+    }
+
+    // ─── INIT ─────────────────────────────────────────────────────
+    renderPreview();
+
+
+    // ══════════════════════════════════════════════════════════════
+    //  FEEDBACK TEXT MODAL (🟣)
+    // ══════════════════════════════════════════════════════════════
+    function openFeedbackModal()  { document.getElementById('feedbackOverlay').classList.add('open'); }
+    function closeFeedbackModal() { document.getElementById('feedbackOverlay').classList.remove('open'); }
+    function overlayFeedbackClick(e) { if (e.target === document.getElementById('feedbackOverlay')) closeFeedbackModal(); }
+
+    async function sendFeedbackText() {
+        const message = document.getElementById('feedbackMsgText').value.trim();
+
+        if (!message) {
+            alert('❗ Xabar matni bo\'sh bo\'lishi mumkin emas!');
+            return;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('message', message);
+
+            const res = await fetch('/set-feed-back-text', { method: 'POST', body: formData });
+            if (!res.ok) throw new Error();
+
+            alert('✅ Feedback matni muvaffaqiyatli saqlandi!');
+            closeFeedbackModal();
+            document.getElementById('feedbackMsgText').value = '';
+
+        } catch (e) {
+            console.error(e);
+            alert('❌ Xatolik yuz berdi!');
+        }
+    }
+</script>
+</body>
+</html>
