@@ -8,6 +8,7 @@ import org.example.cdsmarkaztelegrambot.repositories.ScheduledFeedbackRepository
 import org.example.cdsmarkaztelegrambot.repositories.UserRepository;
 import org.example.cdsmarkaztelegrambot.repositories.WelcomeMessageRepository;
 import org.example.cdsmarkaztelegrambot.services.MediaFileService;
+import org.example.cdsmarkaztelegrambot.services.UserService;
 import org.example.cdsmarkaztelegrambot.telegramBot.TelegramBot;
 import org.example.cdsmarkaztelegrambot.telegramBot.botService.KeyboardService;
 import org.springframework.context.ApplicationContext;
@@ -29,6 +30,7 @@ import java.util.Map;
 public class MessageHandler {
 
     private final ApplicationContext applicationContext;
+    private final UserService userService;
     KeyboardService keyboardService;
     UserRepository userRepository;
     WelcomeMessageRepository welcomeMessageRepository;
@@ -42,7 +44,7 @@ public class MessageHandler {
                           MediaFileService mediaFileService,
                           CheckMessageRepository checkMessageRepository,
                           ScheduledFeedbackRepository scheduledFeedbackRepository,
-                          ApplicationContext applicationContext) {
+                          ApplicationContext applicationContext, UserService userService) {
         this.userRepository = userRepository;
         this.keyboardService = keyboardService;
         this.welcomeMessageRepository = welcomeMessageRepository;
@@ -50,6 +52,7 @@ public class MessageHandler {
         this.checkMessageRepository = checkMessageRepository;
         this.scheduledFeedbackRepository = scheduledFeedbackRepository;
         this.applicationContext = applicationContext;
+        this.userService = userService;
     }
 
     Map<String, UserState> userStates = new HashMap<>();
@@ -65,6 +68,14 @@ public class MessageHandler {
         sendMessage.setChatId(chatId);
 
         if (message.hasText() && message.getText().equals(Messages.START.getLabel())) {
+            String username = message.getFrom().getUserName();
+            List<String> allUsernames = userService.getAllUsernames();
+            if (allUsernames.contains(username)) {
+                sendMessage.setText(Messages.MAIN_MENU.getLabel() + username);
+                getTelegramBot().sendMessage(sendMessage);
+                return;
+            }
+
             userStates.put(chatId, UserState.REGISTRATION_NAME);
             sendMessage.setText(Messages.MAIN_MENU.getLabel() + Messages.NAME.getLabel());
             getTelegramBot().sendMessage(sendMessage);
