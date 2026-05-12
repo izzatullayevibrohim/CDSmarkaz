@@ -16,6 +16,7 @@ import org.example.cdsmarkaztelegrambot.services.WelcomeMessageService;
 import org.example.cdsmarkaztelegrambot.telegramBot.handler.MessageHandler;
 import org.example.cdsmarkaztelegrambot.util.JwtUtil;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +28,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Controller
 @RequiredArgsConstructor
@@ -69,18 +71,9 @@ public class AdminPageController {
     }
 
     @GetMapping("/admin-page")
-    public String adminPage(HttpServletRequest request, Model model) {
-        String token = null;
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if (cookie.getName().equals("jwt")) {
-                    token = cookie.getValue();
-                    break;
-                }
-            }
-        }
-        if (token == null)  return "redirect:/login";
-        String username = jwtUtil.extractUsername(token);
+    public String adminPage(Model model) {
+        String username = Objects.requireNonNull(SecurityContextHolder.getContext()
+                .getAuthentication()).getName();
         User user = userRepository.findByTelegramUsername(username);
         if (user == null) return "redirect:/login";
         Role role = roleRepository.findById(user.getRoleId()).orElse(null);
