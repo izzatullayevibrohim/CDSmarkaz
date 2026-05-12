@@ -131,7 +131,7 @@ public class MessageHandler {
             getTelegramBot().sendMessage(sendMessage);
 
         } else {
-            System.out.println("eeeeeeeeeee!!!!");
+            System.out.println("System error!!!!");
         }
     }
 
