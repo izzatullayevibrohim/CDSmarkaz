@@ -40,16 +40,14 @@ public class JwtFilter extends OncePerRequestFilter {
 
             if (token != null && jwtUtil.isValid(token)) {
                 String username = jwtUtil.extractUsername(token);
-
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(
                                 username, null,
                                 List.of(new SimpleGrantedAuthority("Super Admin"))
                         );
 
-                SecurityContextHolder.getContext().setAuthentication(auth); // ← asosiy qator
+                SecurityContextHolder.getContext().setAuthentication(auth);
             }
-
             filterChain.doFilter(request, response);
         }
     }

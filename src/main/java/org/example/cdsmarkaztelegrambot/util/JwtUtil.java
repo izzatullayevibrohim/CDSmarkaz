@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import java.security.Key;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtUtil {
@@ -18,7 +19,8 @@ public class JwtUtil {
 
     @PostConstruct
     public void init() {
-        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+        String dynamicSecret = secretKey + UUID.randomUUID();
+        this.key = Keys.hmacShaKeyFor(dynamicSecret.getBytes());
     }
 
     @Value("${jwt.expiration}")

@@ -25,6 +25,12 @@ public class SecurityConfig {
                         .requestMatchers("/admin-page").hasAuthority("Super Admin")
                         .anyRequest().authenticated()
                 )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, e) ->
+                                response.sendRedirect("/login"))
+                        .accessDeniedHandler((request, response, e) ->
+                                response.sendRedirect("/login"))
+                )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .logout(logout -> logout.logoutSuccessUrl("/login?logout"));
