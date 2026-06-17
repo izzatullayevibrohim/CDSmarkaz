@@ -19,12 +19,13 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.io.ByteArrayInputStream;
-import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class MessageHandler {
@@ -55,8 +56,8 @@ public class MessageHandler {
         this.userService = userService;
     }
 
-    Map<String, UserState> userStates = new HashMap<>();
-    Map<String, User> tempData = new HashMap<>();
+    Map<String, UserState> userStates = new ConcurrentHashMap<>();
+    Map<String, User> tempData = new ConcurrentHashMap<>();
 
     public TelegramBot getTelegramBot() {
         return applicationContext.getBean(TelegramBot.class);
@@ -69,8 +70,18 @@ public class MessageHandler {
 
         if (message.hasText() && message.getText().equals(Messages.START.getLabel())) {
             String username = message.getFrom().getUserName();
-            List<String> allUsernames = userService.getAllUsernames();
-            if (allUsernames.contains(username)) {
+
+            Optional<User> userOpt = userService.findByUsername(username);
+
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                user.setChatId(String.valueOf(chatId));
+
+                if (!user.getIsActive()) {
+                    user.setIsActive(true);
+                }
+                userService.save(user);
+
                 sendMessage.setText(Messages.MAIN_MENU.getLabel() + username);
                 getTelegramBot().sendMessage(sendMessage);
                 return;
@@ -97,6 +108,9 @@ public class MessageHandler {
             user.setPhoneNumber(message.getContact().getPhoneNumber());
             userStates.put(chatId, UserState.NONE);
 
+            userService.save(user);
+            tempData.remove(chatId);
+
             ReplyKeyboardRemove replyKeyboardRemove = new ReplyKeyboardRemove();
             replyKeyboardRemove.setRemoveKeyboard(true);
             sendMessage.setReplyMarkup(replyKeyboardRemove);
@@ -105,29 +119,39 @@ public class MessageHandler {
             if (welcomeMessage.getMediaFileId() != null) {
                 MediaFile mediaFile = mediaFileService.getMediaFileById(welcomeMessage.getMediaFileId());
                 if (mediaFile != null) {
-                    switch (mediaFile.getFileType()) {
-                        case "image":
-                            SendPhoto sendPhoto = new SendPhoto();
-                            sendPhoto.setChatId(chatId);
-                            sendPhoto.setPhoto(new InputFile(new File(mediaFile.getFilePath())));
-                            getTelegramBot().execute(sendPhoto);
-                            break;
-                        case "video":
-                            SendVideo sendVideo = new SendVideo();
-                            sendVideo.setChatId(chatId);
-                            sendVideo.setVideo(new InputFile(new File(mediaFile.getFilePath())));
-                            getTelegramBot().execute(sendVideo);
-                            break;
-                        case "audio":
-                            SendAudio sendAudio = new SendAudio();
-                            sendAudio.setChatId(chatId);
-                            sendAudio.setAudio(new InputFile(new File(mediaFile.getFilePath())));
-                            getTelegramBot().execute(sendAudio);
-                            break;
+                    try {
+                        byte[] fileBytes = mediaFileService.downloadFile(mediaFile.getFilePath());
+                        InputStream inputStream = new ByteArrayInputStream(fileBytes);
+                        InputFile inputFile = new InputFile(inputStream, mediaFile.getOriginalName());
+
+                        switch (mediaFile.getFileType()) {
+                            case "image":
+                                SendPhoto sendPhoto = new SendPhoto();
+                                sendPhoto.setChatId(chatId);
+                                sendPhoto.setPhoto(inputFile);
+                                getTelegramBot().execute(sendPhoto);
+                                break;
+                            case "video":
+                                SendVideo sendVideo = new SendVideo();
+                                sendVideo.setChatId(chatId);
+                                sendVideo.setVideo(inputFile);
+                                getTelegramBot().execute(sendVideo);
+                                break;
+                            case "audio":
+                                SendAudio sendAudio = new SendAudio();
+                                sendAudio.setChatId(chatId);
+                                sendAudio.setAudio(inputFile);
+                                getTelegramBot().execute(sendAudio);
+                                break;
+                        }
+                    } catch (TelegramApiException e) {
+                        System.err.println("Media yuborishda xatolik [" + chatId + "]: " + e.getMessage());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }
-                sendMessage.setText(welcomeMessage.getMessage());
             }
+            sendMessage.setText(welcomeMessage.getMessage());
             getTelegramBot().sendMessage(sendMessage);
 
         } else {
@@ -136,10 +160,12 @@ public class MessageHandler {
     }
 
     public void broadcastAndSchedule(CheckMessage checkMessage) {
-        List<User> users = userRepository.findAll();
+        List<User> users = userRepository.findAll().stream()
+                .filter(u -> Boolean.TRUE.equals(u.getIsActive()))
+                .filter(u -> u.getChatId() != null)
+                .toList();
 
         for (User user : users) {
-            if (user.getChatId() == null) continue;
             sendToUser(user.getChatId(), checkMessage);
         }
 
@@ -150,8 +176,6 @@ public class MessageHandler {
                 .plusMinutes(checkMessage.getDelayMinutes());
 
         for (User user : users) {
-            if (user.getChatId() == null) continue;
-
             ScheduledFeedback feedback = ScheduledFeedback.builder()
                     .checkMessageId(saved.getId())
                     .userChatId(user.getChatId())
@@ -168,7 +192,6 @@ public class MessageHandler {
             if (msg.getMediaFileId() != null) {
                 MediaFile mediaFile = mediaFileService.getMediaFileById(msg.getMediaFileId());
                 if (mediaFile != null) {
-
                     byte[] fileBytes = mediaFileService.downloadFile(mediaFile.getFilePath());
                     InputStream inputStream = new ByteArrayInputStream(fileBytes);
                     InputFile inputFile = new InputFile(inputStream, mediaFile.getOriginalName());
@@ -205,6 +228,11 @@ public class MessageHandler {
                 getTelegramBot().execute(sm);
             }
 
+        } catch (TelegramApiException e) {
+            if (e.getMessage() != null && e.getMessage().contains("bot was blocked")) {
+                userService.setStatus(chatId, false);
+            }
+            System.err.println("Yuborishda xatolik [" + chatId + "]: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("Yuborishda xatolik [" + chatId + "]: " + e.getMessage());
         }

@@ -19,7 +19,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        User user = userRepository.findByTelegramUsername(username);
+        User user = userRepository.findByTelegramUsername(username).orElse(null);
         if (user == null) {
             throw new UsernameNotFoundException("User topilmadi: " + username);
         }

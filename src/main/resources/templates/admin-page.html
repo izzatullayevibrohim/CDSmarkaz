@@ -5,12 +5,33 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
     <title>Admin Panel — CDS Markaz</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .btn-send .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: btn-spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes btn-spin {
+            to { transform: rotate(360deg); }
+        }
+        .btn-send:disabled,
+        .btn-send.btn-loading {
+            opacity: 0.75;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body>
 
 <aside class="sidebar">
-    <div class="sidebar-logo">
-        <div class="logo-icon">C</div>
+    <div class="sidebar-logo" onclick="toggleSidebar()" title="Menyu" style="cursor:pointer;">
+        <img class="logo-img" th:src="@{/images/cds-logo.png}" alt="CDS"/>
         <span class="logo-text">CDS Markaz</span>
     </div>
     <nav class="sidebar-nav">
@@ -19,19 +40,20 @@
             <span>⊞</span> Dashboard
         </button>
     </nav>
-    <div class="sidebar-footer">
-        <div class="user-row">
-            <div class="avatar">AD</div>
-            <div class="user-info">
-                <p th:text="${user.fullName}"></p>
-                <span th:text="${user.telegramUsername}"></span>
-            </div>
-        </div>
-    </div>
 </aside>
 
 <div class="main">
     <header class="topbar">
+        <button class="icon-btn" onclick="toggleTheme()" title="Tema" id="themeBtn">
+            <svg id="iconMoon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+            </svg>
+            <svg id="iconSun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                <circle cx="12" cy="12" r="5"/>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+            </svg>
+        </button>
+
         <h1 id="pageTitle">Dashboard</h1>
         <div class="search">
             <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -40,14 +62,14 @@
             </svg>
             <input type="text" placeholder="Qidirish..." id="searchInput" oninput="onSearch()"/>
         </div>
-        <div class="admin-chip">
-            <div class="ac-avatar">AD</div>
+        <a class="admin-chip" href="/profile" title="Profilni ochish">
+            <div class="avatar" th:text="${user.getInitials()}">AD</div>
             <div class="ac-info">
                 <span class="ac-name" th:text="${user.fullName}"></span>
                 <span class="ac-role" th:text="${role.name}"></span>
             </div>
             <div class="ac-dot" title="Faol"></div>
-        </div>
+        </a>
         <a class="icon-btn" href="/logout" title="Chiqish">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
@@ -115,29 +137,24 @@
 
     </div>
 
-    <!-- 🔵 Welcome message FAB -->
-    <div class="fab-wrap">
-        <span class="fab-tooltip">Welcome message yuborish</span>
-        <button class="fab blue" onclick="openModal()" title="Welcome message">
-            <svg viewBox="0 0 24 24">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-            </svg>
+    <div class="fab-container">
+        <button class="fab blue" onclick="openModal()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            Welcome message
         </button>
-    </div>
-
-    <!-- 🟢 Check message FAB -->
-    <div class="fab-wrap second">
-        <span class="fab-tooltip">Check message yuborish</span>
-        <button class="fab green" onclick="openCheckModal()" title="Check message">
-            <svg viewBox="0 0 24 24">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-            </svg>
+        <button class="fab green" onclick="openCheckModal()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            Check message
+        </button>
+        <button class="fab purple" onclick="openFeedbackModal()">
+            <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+            Feedback matni
         </button>
     </div>
 
     <!-- ═══════════════════════════════════════════
-         MODAL — CHECK MESSAGE (🟢)
-    ════════════════════════════════════════════ -->
+        MODAL — CHECK MESSAGE (🟢)
+   ════════════════════════════════════════════ -->
     <div class="overlay" id="checkOverlay" onclick="overlayCheckClick(event)">
         <div class="modal">
             <div class="modal-head">
@@ -177,23 +194,12 @@
             </div>
             <div class="modal-foot">
                 <button class="btn-cancel" onclick="closeCheckModal()">Bekor</button>
-                <button class="btn-send" onclick="sendCheckMsg()">
+                <button class="btn-send" onclick="sendCheckMsg(this)">
                     <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     Yuborish
                 </button>
             </div>
         </div>
-    </div>
-
-
-    <!-- 🟣 Feedback text FAB -->
-    <div class="fab-wrap third">
-        <span class="fab-tooltip">Feedback matni o'rnatish</span>
-        <button class="fab purple" onclick="openFeedbackModal()" title="Feedback text">
-            <svg viewBox="0 0 24 24">
-                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-            </svg>
-        </button>
     </div>
 
     <!-- ═══════════════════════════════════════════
@@ -217,7 +223,7 @@
             </div>
             <div class="modal-foot">
                 <button class="btn-cancel" onclick="closeFeedbackModal()">Bekor qilish</button>
-                <button class="btn-send" onclick="sendFeedbackText()">
+                <button class="btn-send" onclick="sendFeedbackText(this)">
                     <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     Saqlash
                 </button>
@@ -271,31 +277,102 @@
             </div>
             <div class="modal-foot">
                 <button class="btn-cancel" onclick="closeModal()">Bekor qilish</button>
-                <button class="btn-send" onclick="sendMsg()">
+                <button class="btn-send" onclick="sendMsg(this)">
                     <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                     Yuborish
                 </button>
             </div>
         </div>
     </div>
+
+    <!-- ═══════════════════════════════════════════
+     MODAL — USER DETAIL (👤)
+════════════════════════════════════════════ -->
+    <div class="overlay" id="userOverlay" onclick="overlayUserClick(event)">
+        <div class="modal">
+            <div class="modal-head">
+                <h3>Foydalanuvchi ma'lumotlari 👤</h3>
+                <button class="modal-x" onclick="closeUserModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-avatar-row">
+                    <div class="detail-avatar" id="ud-avatar">U</div>
+                    <div>
+                        <div class="detail-name" id="ud-name">—</div>
+                        <div class="detail-username" id="ud-username">—</div>
+                    </div>
+                </div>
+
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">To'liq ism</span>
+                        <div class="detail-row">
+                            <span class="detail-value" id="ud-fullname">—</span>
+                            <button class="copy-btn" onclick="copyField('ud-fullname', this)" title="Nusxa olish">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Telefon raqami</span>
+                        <div class="detail-row">
+                            <span class="detail-value mono" id="ud-phone">—</span>
+                            <button class="copy-btn" onclick="copyField('ud-phone', this)" title="Nusxa olish">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Telegram username</span>
+                        <div class="detail-row">
+                            <span class="detail-value" id="ud-tg">—</span>
+                            <button class="copy-btn" onclick="copyField('ud-tg', this)" title="Nusxa olish">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Holat</span>
+                        <span class="detail-value" id="ud-status">—</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button class="btn-cancel" onclick="closeUserModal()">Yopish</button>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script th:inline="javascript">
     const ALL_USERS = /*[[${users}]]*/ [];
 
     function row(u, index) {
-        return `<tr>
-            <td class="mono" style="color:var(--muted)">${String(index + 1).padStart(3,'0')}</td>
-            <td style="font-weight:500">${u.fullName}</td>
-            <td class="mono" style="color:var(--muted)">${u.phoneNumber}</td>
-            <td style="color:var(--accent)">@${u.telegramUsername}</td>
-            <td class="mono" style="color:var(--muted);font-size:11px">${new Date(u.createdAt).toLocaleString()}</td>
-            <td>
-                <span class="status ${u.isActive ? 'active' : 'inactive'}">
-                    <span class="dot"></span>${u.isActive ? 'Faol' : 'Nofaol'}
-                </span>
-            </td>
-        </tr>`;
+        return `<tr onclick="openUserModal(${index})" style="cursor:pointer">
+        <td class="mono" style="color:var(--muted)">${String(index + 1).padStart(3,'0')}</td>
+        <td style="font-weight:500">${u.fullName}</td>
+        <td class="mono" style="color:var(--muted)">${u.phoneNumber}</td>
+        <td style="color:var(--accent)">@${u.telegramUsername}</td>
+        <td class="mono" style="color:var(--muted);font-size:11px">${new Date(u.createdAt).toLocaleString()}</td>
+        <td>
+            <button
+                class="status ${u.isActive ? 'active' : 'inactive'}"
+                onclick="event.stopPropagation(); toggleStatus('${u.telegramUsername}', this)"
+                style="border:none;cursor:pointer;background:inherit;">
+                <span class="dot"></span>${u.isActive ? 'Active' : 'No Active'}
+            </button>
+        </td>
+    </tr>`;
     }
 
     // ─── PREVIEW ──────────────────────────────────────────────────
@@ -386,6 +463,27 @@
     }
 
     // ══════════════════════════════════════════════════════════════
+    //  SEND-BUTTON LOADING STATE
+    // ══════════════════════════════════════════════════════════════
+    function setBtnLoading(btn, loadingText) {
+        if (!btn) return;
+        if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.classList.add('btn-loading');
+        btn.innerHTML = `<span class="spinner"></span>${loadingText}`;
+    }
+
+    function clearBtnLoading(btn) {
+        if (!btn) return;
+        btn.disabled = false;
+        btn.classList.remove('btn-loading');
+        if (btn.dataset.originalHtml) {
+            btn.innerHTML = btn.dataset.originalHtml;
+            delete btn.dataset.originalHtml;
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
     //  WELCOME MESSAGE MODAL (🔵)
     // ══════════════════════════════════════════════════════════════
     function openModal()  { document.getElementById('overlay').classList.add('open'); }
@@ -434,7 +532,7 @@
         }
     }
 
-    async function sendMsg() {
+    async function sendMsg(btn) {
         const type    = currentType;
         const txt     = document.getElementById('msgText').value.trim();
         const fileEl  = document.getElementById('msgFile');
@@ -450,6 +548,7 @@
             return;
         }
 
+        setBtnLoading(btn, 'Yuborilmoqda...');
         try {
             const formData = new FormData();
             formData.append('type', type);
@@ -473,6 +572,8 @@
         } catch (error) {
             console.error(error);
             alert('❌ Xatolik yuz berdi. Xabar yuborilmadi!');
+        } finally {
+            clearBtnLoading(btn);
         }
     }
 
@@ -524,7 +625,7 @@
         }
     }
 
-    async function sendCheckMsg() {
+    async function sendCheckMsg(btn) {
         const txt     = document.getElementById('checkMsgText').value.trim();
         const fileEl  = document.getElementById('checkMsgFile');
         const caption = document.getElementById('checkMsgCaption').value.trim();
@@ -555,6 +656,7 @@
             return;
         }
 
+        setBtnLoading(btn, 'Yuborilmoqda...');
         try {
             const formData = new FormData();
             formData.append('type', checkType);
@@ -583,6 +685,8 @@
         } catch (e) {
             console.error(e);
             alert('❌ Xatolik yuz berdi!');
+        } finally {
+            clearBtnLoading(btn);
         }
     }
 
@@ -597,7 +701,7 @@
     function closeFeedbackModal() { document.getElementById('feedbackOverlay').classList.remove('open'); }
     function overlayFeedbackClick(e) { if (e.target === document.getElementById('feedbackOverlay')) closeFeedbackModal(); }
 
-    async function sendFeedbackText() {
+    async function sendFeedbackText(btn) {
         const message = document.getElementById('feedbackMsgText').value.trim();
 
         if (!message) {
@@ -605,6 +709,7 @@
             return;
         }
 
+        setBtnLoading(btn, 'Yuborilmoqda...');
         try {
             const formData = new FormData();
             formData.append('message', message);
@@ -619,7 +724,101 @@
         } catch (e) {
             console.error(e);
             alert('❌ Xatolik yuz berdi!');
+        } finally {
+            clearBtnLoading(btn);
         }
+    }
+
+
+    async function toggleStatus(username, btn) {
+        try {
+            const res = await fetch('/toggle-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'username=' + encodeURIComponent(username)
+            });
+
+            if (!res.ok) throw new Error();
+
+            const isNowActive = btn.classList.contains('inactive');
+
+            btn.classList.toggle('active');
+            btn.classList.toggle('inactive');
+            btn.innerHTML = `<span class="dot"></span>${isNowActive ? 'Active' : 'No Active'}`;
+
+        } catch (e) {
+            alert('❌ Xatolik yuz berdi!');
+        }
+    }
+
+    function toggleSidebar() {
+        document.querySelector('.sidebar').classList.toggle('collapsed');
+    }
+
+    // Flash oldini olish uchun darhol ishga tushadi
+    if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.classList.add('dark');
+    }
+
+    // ══════════════════════════════════════════════════════════════
+    //  USER DETAIL MODAL (👤)
+    // ══════════════════════════════════════════════════════════════
+    function openUserModal(index) {
+        const u = filtered[index];
+        if (!u) return;
+
+        document.getElementById('ud-avatar').textContent =
+            (u.fullName || '?').trim().charAt(0).toUpperCase();
+        document.getElementById('ud-name').textContent     = u.fullName || '—';
+        document.getElementById('ud-username').textContent = '@' + (u.telegramUsername || '');
+        document.getElementById('ud-fullname').textContent = u.fullName || '—';
+        document.getElementById('ud-phone').textContent    = u.phoneNumber || '—';
+        document.getElementById('ud-tg').textContent       = '@' + (u.telegramUsername || '');
+
+        const statusEl = document.getElementById('ud-status');
+        statusEl.innerHTML = u.isActive
+            ? '<span class="badge-status active">● Active</span>'
+            : '<span class="badge-status inactive">● No Active</span>';
+
+        document.getElementById('userOverlay').classList.add('open');
+    }
+    function closeUserModal() { document.getElementById('userOverlay').classList.remove('open'); }
+    function overlayUserClick(e) { if (e.target === document.getElementById('userOverlay')) closeUserModal(); }
+
+    // ══════════════════════════════════════════════════════════════
+    //  DARK MODE
+    // ══════════════════════════════════════════════════════════════
+    function applyThemeIcon() {
+        const isDark = document.documentElement.classList.contains('dark');
+        document.getElementById('iconMoon').style.display = isDark ? 'none' : 'block';
+        document.getElementById('iconSun').style.display  = isDark ? 'block' : 'none';
+    }
+    function toggleTheme() {
+        document.documentElement.classList.toggle('dark');
+        const isDark = document.documentElement.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        applyThemeIcon();
+    }
+    applyThemeIcon();
+
+    // ─── CLIPBOARD ────────────────────────────────────────────────
+    function copyField(elId, btn) {
+        const el = document.getElementById(elId);
+        let text = (el.textContent || '').trim();
+        if (!text || text === '—') return;
+
+        navigator.clipboard.writeText(text).then(() => {
+            // Tugmani vaqtincha "✓" holatiga o'tkazish
+            btn.classList.add('copied');
+            const original = btn.innerHTML;
+            btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>`;
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.innerHTML = original;
+            }, 1400);
+        }).catch(() => {
+            alert('❌ Nusxa olib bo\'lmadi');
+        });
     }
 </script>
 </body>

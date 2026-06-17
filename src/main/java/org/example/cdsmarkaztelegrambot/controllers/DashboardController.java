@@ -1,14 +1,10 @@
 package org.example.cdsmarkaztelegrambot.controllers;
 
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.example.cdsmarkaztelegrambot.models.CheckMessage;
 import org.example.cdsmarkaztelegrambot.models.Role;
 import org.example.cdsmarkaztelegrambot.models.User;
 import org.example.cdsmarkaztelegrambot.repositories.RoleRepository;
-import org.example.cdsmarkaztelegrambot.repositories.ScheduledFeedbackRepository;
 import org.example.cdsmarkaztelegrambot.repositories.UserRepository;
 import org.example.cdsmarkaztelegrambot.services.FeedBackService;
 import org.example.cdsmarkaztelegrambot.services.MediaFileService;
@@ -16,12 +12,11 @@ import org.example.cdsmarkaztelegrambot.services.WelcomeMessageService;
 import org.example.cdsmarkaztelegrambot.telegramBot.handler.MessageHandler;
 import org.example.cdsmarkaztelegrambot.util.JwtUtil;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -32,7 +27,7 @@ import java.util.Objects;
 
 @Controller
 @RequiredArgsConstructor
-public class AdminPageController {
+public class DashboardController {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -40,41 +35,14 @@ public class AdminPageController {
     private final MediaFileService mediaFileService;
     private final WelcomeMessageService welcomeMessageService;
     private final MessageHandler messageHandler;
-    private final ScheduledFeedbackRepository scheduledFeedbackRepository;
     private final FeedBackService feedBackService;
 
-    @GetMapping("/login")
-    public String loginPage() {
-        System.out.println("keldiiiii");
-        return "login";
-    }
-
-    @PostMapping("/login-check")
-    public String login(@RequestParam String username,
-                        @RequestParam String password,
-                        HttpServletResponse response) {
-
-        User user = userRepository.findByTelegramUsername(username);
-        if (user == null) {
-            return "redirect:/login?error=user";
-        }
-        if (user.getPassword().equals(password)) {
-            String token = jwtUtil.generateToken(username);
-            Cookie cookie = new Cookie("jwt", token);
-            cookie.setHttpOnly(true);
-            cookie.setPath("/");
-            cookie.setMaxAge(60 * 60 * 24);
-            response.addCookie(cookie);
-            return "redirect:/admin-page";
-        }
-        return "redirect:/login?error=pass";
-    }
 
     @GetMapping("/admin-page")
     public String adminPage(Model model) {
         String username = Objects.requireNonNull(SecurityContextHolder.getContext()
                 .getAuthentication()).getName();
-        User user = userRepository.findByTelegramUsername(username);
+        User user = userRepository.findByTelegramUsername(username).orElse(null);
         if (user == null) return "redirect:/login";
         Role role = roleRepository.findById(user.getRoleId()).orElse(null);
         List<User> users = new ArrayList<>(userRepository.findByRoleIdIsNull());
@@ -91,15 +59,6 @@ public class AdminPageController {
         model.addAttribute("user", user);
         model.addAttribute("role", role);
         return "admin-page";
-    }
-
-    @GetMapping("/logout")
-    public String logout(HttpServletResponse response) {
-        Cookie cookie = new Cookie("jwt", null);
-        cookie.setMaxAge(0);
-        cookie.setPath("/");
-        response.addCookie(cookie);
-        return "redirect:/login";
     }
 
     @PostMapping(value = "/send-welcome", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -147,5 +106,66 @@ public class AdminPageController {
     public String setFeedBackMessage(@RequestParam String message){
         feedBackService.saveFeedbackMessage(message);
         return "redirect:/admin-page";
+    }
+
+    @PostMapping("/toggle-status")
+    @ResponseBody
+    public ResponseEntity<String> toggleStatus(@RequestParam String username) {
+        User user = userRepository.findByTelegramUsername(username).orElse(null);
+        if (user == null) return ResponseEntity.notFound().build();
+
+        user.setIsActive(!user.getIsActive());
+        userRepository.save(user);
+
+        return ResponseEntity.ok("ok");
+    }
+
+    @GetMapping("/get/user-data")
+    public String getUserData(Model model, Long userId) {
+        model.addAttribute("user", userRepository.findById(userId));
+        return "admin-page";
+    }
+
+    @GetMapping("/profile")
+    public String profile(@CookieValue(value = "jwt", required = false) String token,
+                          Model model) {
+        if (token == null) {
+            return "redirect:/login";
+        }
+
+        String username = jwtUtil.extractUsername(token);
+        User user = userRepository.findByTelegramUsername(username).orElse(null);
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        model.addAttribute("user", user);
+        return "profile";
+    }
+
+    @PostMapping("/profile/update")
+    public String updateProfile(@CookieValue(value = "jwt", required = false) String token,
+                                @RequestParam String fullName,
+                                @RequestParam String phoneNumber,
+                                @RequestParam(required = false) String password) {
+        if (token == null) {
+            return "redirect:/login";
+        }
+
+        String username = jwtUtil.extractUsername(token);
+        User user = userRepository.findByTelegramUsername(username).orElse(null);
+        if (user == null) {
+            return "redirect:/login";
+        }
+
+        user.setFullName(fullName);
+        user.setPhoneNumber(phoneNumber);
+
+        if (password != null && !password.trim().isEmpty()) {
+            user.setPassword(password);
+        }
+
+        userRepository.save(user);
+        return "redirect:/profile";
     }
 }
