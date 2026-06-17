@@ -85,14 +85,16 @@
                 <div class="value" th:text="${userCount}">—</div>
                 <div class="change neutral">ro'yxatdagi</div>
             </div>
+
             <div class="stat-card">
                 <div class="label">Faol</div>
                 <div class="value" th:text="${countIsActive}">—</div>
                 <div class="change up">▲ faol</div>
             </div>
-            <div class="stat-card">
+
+            <div class="stat-card" onclick="showTodayUsers()" style="cursor:pointer">
                 <div class="label">Bugun qo'shilgan</div>
-                <div class="value" th:text="${todayUsers}">—</div>
+                <div class="value" th:text="${todayUsersCount}">—</div>
                 <div class="change up">▲ yangi</div>
             </div>
         </div>
@@ -356,6 +358,7 @@
 
 <script th:inline="javascript">
     const ALL_USERS = /*[[${users}]]*/ [];
+    const TODAY_USERS = /*[[${todayUsers}]]*/ [];
 
     function row(u, index) {
         return `<tr onclick="openUserModal(${index})" style="cursor:pointer">
@@ -819,6 +822,15 @@
         }).catch(() => {
             alert('❌ Nusxa olib bo\'lmadi');
         });
+    }
+
+    function showTodayUsers() {
+        document.getElementById('previewPanel').classList.add('hidden');
+        document.getElementById('fullPanel').classList.remove('hidden');
+        document.querySelector('#fullPanel .panel-head h2').textContent = "Bugun qo'shilgan foydalanuvchilar";
+        filtered = [...TODAY_USERS];
+        page = 1;
+        renderFull();
     }
 </script>
 </body>

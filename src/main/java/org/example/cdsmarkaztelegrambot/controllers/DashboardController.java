@@ -24,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Controller
 @RequiredArgsConstructor
@@ -46,12 +47,14 @@ public class DashboardController {
         if (user == null) return "redirect:/login";
         Role role = roleRepository.findById(user.getRoleId()).orElse(null);
         List<User> users = new ArrayList<>(userRepository.findByRoleIdIsNull());
-        Long userCount = userRepository.count();
+        Long userCount = userRepository.countByRoleIdIsNull();
         Long countIsActive = userRepository.countByIsActive(Boolean.TRUE);
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = today.plusDays(1).atStartOfDay();
-        Long todayUsers = userRepository.countByCreatedAtBetween(start, end);
+        Long todayUsersCount = userRepository.countByCreatedAtBetween(start, end);
+        List<User> todayUsers = userRepository.findByCreatedAtBetween(start, end);
+        model.addAttribute("todayUsersCount", todayUsersCount);
         model.addAttribute("todayUsers", todayUsers);
         model.addAttribute("countIsActive", countIsActive);
         model.addAttribute("userCount", userCount);
